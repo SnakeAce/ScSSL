@@ -14,22 +14,166 @@ namespace Office_Auto_configuration
 {
     internal static class Lync
     {
-
         internal static void Configure()
         {
             Console.Clear();
-            Console.WriteLine("Lync Configuration");
+            Console.WriteLine(Resources.TextLyncConfigurationTitle);
+
+            //InstallCertificate();
+            ConfigureRegistryKeys();
+            //ConfigureHostsFile();
+
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
         }
-    
 
+
+        #region private mathods
+        private static void InstallCertificate()
+        {
+
+            //Для пользователя
+            var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
+            //Для данного компьютера 
+            //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+            //?? X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+
+
+            X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
+            if (certs.Count > 0)
+            {
+#if DEBUG
+                Console.WriteLine($"Certificates: ");
+                for (int i = 0; i < certs.Count; ++i)
+                {
+                    Console.WriteLine($"{i + 1}. {certs[i].Issuer} {certs[i].Thumbprint}");
+                }
+#endif
+
+                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+                store.Close();
+                return;
+            }
+
+            store.Open(OpenFlags.ReadWrite);
+            try
+            {
+                var cert = new X509Certificate2(Resources.AddPath(Resources.LyncServerDomainCertificateFileName));
+                store.Add(cert);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+
+            certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
+            if (certs.Count > 0)
+            {
+#if DEBUG
+                Console.WriteLine($"Certificates: ");
+                for (int i = 0; i < certs.Count; ++i)
+                {
+                    Console.WriteLine($"{i + 1}. {certs[i].Issuer} {certs[i].Thumbprint}");
+                }
+#endif
+
+                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+                store.Close();
+                return;
+            }
+            Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed}");
+            store.Close();
+
+        }
+        private static void ConfigureHostsFile()
+        {
+            string path = $@"{Environment.GetEnvironmentVariable("SystemRoot")}\System32\drivers\etc\hosts";
+            if (!File.Exists(path))
+                File.Create(path);
+            string[] records = File.ReadAllLines(path);
+            List<string> newrecords = (from line in records let cline = line.ToLower() where !cline.Contains(Resources.LyncServerAddressExternal) && !cline.Contains(Resources.LyncServerDnsAddsServerIp) select line).ToList();
+            newrecords.Add(Resources.LyncDnsRecordsTitle);
+            //При необходимости добавить другие записи
+            newrecords.AddRange(Resources.LyncExternalDnsARecordsPrefix.Select(prefix => $"{Resources.LyncServerIp} {prefix}.{Resources.LyncServerAddressExternal}"));
+            try
+            {
+                File.WriteAllLines(path, newrecords);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            string text = File.ReadAllText(path);
+#if DEBUG
+            Console.WriteLine($"Hosts:\n{File.ReadAllText(path)}");
+#endif
+            Console.WriteLine(text.Contains(Resources.LyncDnsRecordsTitle)
+                ? $"{Resources.TextHostsFileConfiguration}: {Resources.TextSuccess}"
+                : $"{Resources.TextHostsFileConfiguration}: {Resources.TextFailed}");
+        }
+        private static void ConfigureRegistryKeys()
+        {
+            var success = true;
+            RegistryKey currentKey = Resources.CurrentUser;
+            currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("office");
+            if (currentKey == null)
+            {
+                success = false;
+                //TODO: Пересмотреть логику.
+                //InstallOffice();
+                //Console.WriteLine("You should install office before.");
+            }
+            else
+            {
+                List<string> officeVersions = currentKey.GetSubKeyNames().Select(x => x).Where(x => x.Contains(".0")).ToList<string>();
+                var lyncInstalled = false;
+                foreach (string version in officeVersions)
+                {
+                    RegistryKey lyncKey = currentKey.OpenSubKey(version)?.OpenSubKey("lync", true);
+                    if (lyncKey == null)
+                        continue;
+                    lyncInstalled = true;
+
+                    //TODO: Проверить на возможность возникновения ошибок
+#if DEBUG
+                    Console.WriteLine($"Lync Version: {version}");
+                    lyncKey.SetValue("ConfigurationMode", 1, RegistryValueKind.DWord);
+                    Console.WriteLine($"ConfigurationMode: {lyncKey.GetValue("ConfigurationMode")}");
+
+                    lyncKey.SetValue("ServerAddressInternal", Resources.LyncServerAddressInternal, RegistryValueKind.String);
+                    Console.WriteLine($"ServerAddressInternal: {lyncKey.GetValue("ServerAddressInternal")}");
+
+                    lyncKey.SetValue("ServerAddressExternal", Resources.LyncServerAddressExternal, RegistryValueKind.String);
+                    Console.WriteLine($"ServerAddressExternal: {lyncKey.GetValue("ServerAddressExternal")}");
+#else
+                    lyncKey.SetValue("ConfigurationMode", 1, RegistryValueKind.DWord);
+                    lyncKey.SetValue("ServerAddressInternal", Resources.LyncServerAddressInternal, RegistryValueKind.String);
+                    lyncKey.SetValue("ServerAddressExternal", Resources.LyncServerAddressExternal, RegistryValueKind.String);
+#endif
+
+                }
+                if (!lyncInstalled)
+                {
+                    success = false;
+                    //TODO: Пересмотреть логику.
+                    //InstallOffice();
+                    //Console.WriteLine("You should install Lync before.");               
+                }
+            }
+
+            Console.WriteLine(success
+                ? $"{Resources.TextRegistryKeysConfiguration}: {Resources.TextSuccess}"
+                : $"{Resources.TextRegistryKeysConfiguration}: {Resources.TextFailed}");
+        }
+#endregion
         private static void LyncConfigureUsers()
         {
-            
-            List<string> emails = new List<string>();
 
-            #region lync 2016
+            var emails = new List<string>();
+
+#region lync 2016
 
             RegistryKey currentKey = Resources.CurrentUser;
             currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("office");
@@ -68,9 +212,9 @@ namespace Office_Auto_configuration
                 }
             }
 
-            #endregion
+#endregion
 
-            #region old lync
+#region old lync
 
             currentKey = Resources.CurrentUser;
             //Windows NT\CurrentVersion\Windows Messaging Subsystem\Profiles
@@ -106,7 +250,7 @@ namespace Office_Auto_configuration
                                         .Replace("\0", "")));
                 }
 
-            #endregion
+#endregion
 
             emails = emails.Distinct().ToList();
             Regex emailRegex = new Regex(@"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*", RegexOptions.IgnoreCase);
@@ -125,7 +269,7 @@ namespace Office_Auto_configuration
                     }
                 }
             }
-            WriteHover();
+      
             if (nemails.Count > 0)
             {
                 Console.WriteLine("Emails: ");
@@ -137,123 +281,8 @@ namespace Office_Auto_configuration
                 Console.WriteLine("There are not emails");
             }
 
-            WriteHover();
-        }
-        private static void LyncConfigureCertificate()
-        {
-            X509Certificate2 cert = new X509Certificate2(Resources.LyncServerDomainCertificateFileName);
-            //Для пользователя
-            X509Store store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
-            //Для данного компьютера 
-            //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            //?? X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-
-            store.Open(OpenFlags.ReadWrite);
-            try
-            {
-                store.Add(cert);
-            }
-            catch (Exception ex)
-            {
-
-                Console.WriteLine($"Error: {ex.Message}");
-            }
-
-
-            WriteHover();
-            X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
-            if (certs.Count > 0)
-            {
-                // Certificate is found.
-                Console.WriteLine($"Certificates: ");
-                for (int i = 0; i < certs.Count; ++i)
-                {
-                    Console.WriteLine($"{i + 1}. {certs[i].Issuer} {certs[i].Thumbprint}");
-                }
-            }
-            else
-            {
-                Console.WriteLine("No certificates installed");
-            }
-            WriteHover();
-            store.Close();
-        }
-        private static void LyncConfigureHosts()
-        {
-            string path = $@"{Environment.GetEnvironmentVariable("SystemRoot")}\System32\drivers\etc\hosts";
-            string[] lines = File.ReadAllLines(path);
-            List<string> newlines = new List<string>();
-            foreach (string line in lines)
-            {
-                string cline = line.ToLower();
-                //TODO: добавить все возможные варианты
-                if (cline.Contains(Resources.LyncServerAddressExternal) || cline.Contains(Resources.LyncServerDnsAddsServerIp))
-                    continue;
-                newlines.Add(line);
-            }
-
-            newlines.Add($"# Here DNS records for {Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} {Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} lyncdiscover.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} sip.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} dialin.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} meet.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} Lyncwebext.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} AV.{Resources.LyncServerAddressExternal}");
-            //SRV ??
-            newlines.Add($"{Resources.LyncServerIp} _sip._tls.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} _sipfederationtls.{Resources.LyncServerAddressExternal}");
-            newlines.Add($"{Resources.LyncServerIp} _xmpp-server._tcp.{Resources.LyncServerAddressExternal}");
-            File.WriteAllLines(path, newlines);
-
-            WriteHover();
-            Console.WriteLine($"Hosts:\n{File.ReadAllText(path)}");
-            WriteHover();
-
-        }
-        private static void WriteHover()
-        {
-            Console.WriteLine("-----------------------------------------------------------------------");
-        }
-        private static void LyncConfigureRegistry()
-        {
-            RegistryKey currentKey = Resources.CurrentUser;
-            currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("office");
-            if (currentKey == null)
-            {
-                InstallOffice();
-                Console.WriteLine("You should install office before.");
-                return;
-            }
-            List<string> officeVersions = currentKey.GetSubKeyNames().Select(x => x).Where(x => x.Contains(".0")).ToList<string>();
-            bool lyncInstalled = false;
-            foreach (string version in officeVersions)
-            {
-                RegistryKey lyncKey = currentKey.OpenSubKey(version)?.OpenSubKey("lync", true);
-                if (lyncKey == null)
-                    continue;
-                lyncInstalled = true;
-                WriteHover();
-                Console.WriteLine($"Lync Version: {version}");
-
-                //TODO: try-catch?
-                lyncKey.SetValue("ConfigurationMode", 1, RegistryValueKind.DWord);
-                Console.WriteLine($"ConfigurationMode: {lyncKey.GetValue("ConfigurationMode")}");
-
-                lyncKey.SetValue("ServerAddressInternal", Resources.LyncServerAddressInternal, RegistryValueKind.String);
-                Console.WriteLine($"ServerAddressInternal: {lyncKey.GetValue("ServerAddressInternal")}");
-
-                lyncKey.SetValue("ServerAddressExternal", Resources.LyncServerAddressExternal, RegistryValueKind.String);
-                Console.WriteLine($"ServerAddressExternal: {lyncKey.GetValue("ServerAddressExternal")}");
-                WriteHover();
-            }
-            if (!lyncInstalled)
-            {
-                InstallOffice();
-                Console.WriteLine("You should install Lync before.");
-                return;
-            }
-        }
+    
+        }  
         private static void InstallOffice()
         {
             return;
@@ -273,7 +302,7 @@ namespace Office_Auto_configuration
 
 
         }
-        public static void Decompress(FileInfo fileToDecompress)
+        private static void Decompress(FileInfo fileToDecompress)
         {
             using (FileStream originalFileStream = fileToDecompress.OpenRead())
             {

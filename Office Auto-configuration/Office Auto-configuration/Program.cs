@@ -9,6 +9,7 @@ namespace Office_Auto_configuration
     {
         static void Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.GetEncoding(1251);
             Menu menu = new Menu();
             menu.Show();
         }
