@@ -139,7 +139,6 @@ namespace Office_Auto_configuration
 
             WriteHover();
         }
-
         private static void LyncConfigureCertificate()
         {
             X509Certificate2 cert = new X509Certificate2(Resources.LyncServerDomainCertificateFileName);
@@ -291,8 +290,6 @@ namespace Office_Auto_configuration
                 }
             }
         }
-
-
 
     }
 }
