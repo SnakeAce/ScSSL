@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Microsoft.Win32;
 
@@ -17,7 +16,8 @@ namespace Office_Auto_configuration
         internal const string FilesPath = "Files/";
 
         #region Text
-        internal const string TextWelcome = "Вас приветсвует программа для автонастройки продуктов Microsoft для подключения к серверу ssl.local";
+        internal const string TextServerName = "ssl.local";
+        internal static readonly string TextWelcome = $"Вас приветсвует программа для автонастройки продуктов Microsoft для подключения к серверу {Resources.TextServerName}";
         internal const string TextTitleSelection = "Выбирете то, что желаете настроить.";
         internal const string TextSelectionItemFirst = "1. Настройка Lync или Skype for business";
         internal const string TextSelectionItemSecond = "2. Настройка Outlook";
@@ -29,6 +29,8 @@ namespace Office_Auto_configuration
         internal const string TextHostsFileConfiguration = "Настройка DNS";
         internal const string TextLyncConfigurationTitle = "Настройка Lync или Skype for business";
         internal const string TextRegistryKeysConfiguration = "Конфигурация регистра";
+        internal const string TextUserAccountsNotFound = "Пользователи Outlook не обнаружены";
+        internal const string TextUserAccountsFound = "Найденные пользователи";
         #endregion
 
         #region Lync Fields
@@ -44,6 +46,8 @@ namespace Office_Auto_configuration
 
         internal static readonly string LyncDnsRecordsTitle = $"# Here DNS records for {Resources.LyncServerAddressExternal}";
 
+        internal static readonly string[] LyncOutlookUserKeys = {"001f6641", "001e660b" };
+        
         #region DNS Records
         internal static readonly string[] LyncInternalDnsARecordsPrefix = { "lyncdiscoverinternal", "lync", "sip", "dialin", "meet", "Admin"};
         internal static readonly string[] LyncInternalDnsSrvRecordsPrefix = { "_ntp._udp", "_sip._tls", "_sipfederationtls", "_sipinternaltls", "_xmpp-server._tcp"};

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -19,9 +15,10 @@ namespace Office_Auto_configuration
             Console.Clear();
             Console.WriteLine(Resources.TextLyncConfigurationTitle);
 
-            //InstallCertificate();
+            InstallCertificate();
             ConfigureRegistryKeys();
-            //ConfigureHostsFile();
+            ConfigureHostsFile();
+            ConfigureUsers();
 
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
@@ -31,6 +28,16 @@ namespace Office_Auto_configuration
         #region private mathods
         private static void InstallCertificate()
         {
+            X509Certificate2 cert;
+            try
+            {
+                cert = new X509Certificate2(Resources.AddPath(Resources.LyncServerDomainCertificateFileName));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+                return;
+            }
 
             //Для пользователя
             var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
@@ -42,46 +49,41 @@ namespace Office_Auto_configuration
             X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
             {
-#if DEBUG
-                Console.WriteLine($"Certificates: ");
                 for (int i = 0; i < certs.Count; ++i)
                 {
-                    Console.WriteLine($"{i + 1}. {certs[i].Issuer} {certs[i].Thumbprint}");
+                    if (certs[i].Thumbprint == cert.Thumbprint)
+                    {
+                        Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+                        store.Close();
+                        return;
+                    }
                 }
-#endif
-
-                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
-                store.Close();
-                return;
             }
 
             store.Open(OpenFlags.ReadWrite);
             try
             {
-                var cert = new X509Certificate2(Resources.AddPath(Resources.LyncServerDomainCertificateFileName));
                 store.Add(cert);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // ignored
+                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+                store.Close();
+                return;
             }
-
 
             certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
             {
-#if DEBUG
-                Console.WriteLine($"Certificates: ");
                 for (int i = 0; i < certs.Count; ++i)
                 {
-                    Console.WriteLine($"{i + 1}. {certs[i].Issuer} {certs[i].Thumbprint}");
+                    if (certs[i].Thumbprint != cert.Thumbprint) continue;
+                    Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+                    store.Close();
+                    return;
                 }
-#endif
-
-                Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
-                store.Close();
-                return;
             }
+
             Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed}");
             store.Close();
 
@@ -92,13 +94,23 @@ namespace Office_Auto_configuration
             if (!File.Exists(path))
                 File.Create(path);
             string[] records = File.ReadAllLines(path);
-            List<string> newrecords = (from line in records let cline = line.ToLower() where !cline.Contains(Resources.LyncServerAddressExternal) && !cline.Contains(Resources.LyncServerDnsAddsServerIp) select line).ToList();
-            newrecords.Add(Resources.LyncDnsRecordsTitle);
-            //При необходимости добавить другие записи
-            newrecords.AddRange(Resources.LyncExternalDnsARecordsPrefix.Select(prefix => $"{Resources.LyncServerIp} {prefix}.{Resources.LyncServerAddressExternal}"));
+            var newRecords = new List<string>();
+            foreach (string record in records)
+            {
+                string cline = record.ToLower();
+                //TODO: Все возможные варианты
+                if (!cline.Contains(Resources.LyncServerAddressExternal) && !cline.Contains(Resources.LyncServerDnsAddsServerIp))
+                    newRecords.Add(record);
+            }
+            newRecords.Add(Resources.LyncDnsRecordsTitle);
+            //TODO: При необходимости добавить другие записи
+            foreach (string prefix in Resources.LyncExternalDnsARecordsPrefix)
+            {
+                newRecords.Add($"{Resources.LyncServerIp} {prefix}.{Resources.LyncServerAddressExternal}");
+            }
             try
             {
-                File.WriteAllLines(path, newrecords);
+                File.WriteAllLines(path, newRecords.ToArray());
             }
             catch (Exception)
             {
@@ -127,7 +139,12 @@ namespace Office_Auto_configuration
             }
             else
             {
-                List<string> officeVersions = currentKey.GetSubKeyNames().Select(x => x).Where(x => x.Contains(".0")).ToList<string>();
+                var officeVersions = new List<string>();
+                foreach (string subKeyName in currentKey.GetSubKeyNames())
+                {
+                    if (subKeyName.Contains(".0"))
+                        officeVersions.Add(subKeyName);
+                }
                 var lyncInstalled = false;
                 foreach (string version in officeVersions)
                 {
@@ -167,158 +184,115 @@ namespace Office_Auto_configuration
                 ? $"{Resources.TextRegistryKeysConfiguration}: {Resources.TextSuccess}"
                 : $"{Resources.TextRegistryKeysConfiguration}: {Resources.TextFailed}");
         }
-#endregion
-        private static void LyncConfigureUsers()
+        private static void ConfigureUsers()
         {
-
             var emails = new List<string>();
 
-#region lync 2016
+            #region v2016
 
             RegistryKey currentKey = Resources.CurrentUser;
             currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("office");
 
-            List<string> officeVersions =
-                currentKey.GetSubKeyNames().Select(x => x).Where(x => x.Contains(".0")).ToList<string>();
+            var officeVersions = new List<string>();
 
-            foreach (string version in officeVersions)
+            if (currentKey != null)
             {
-                RegistryKey outlookpreKey = currentKey.OpenSubKey(version)?
-                    .OpenSubKey("outlook")?.OpenSubKey("profiles");
-                string[] outlookKeys = outlookpreKey?.GetSubKeyNames();
-                if (outlookKeys == null) continue;
-                foreach (string ok in outlookKeys)
+                foreach (string subKeyName in currentKey.GetSubKeyNames())
                 {
-                    RegistryKey outlookKey = outlookpreKey?.OpenSubKey(ok);
-                    if (outlookKey == null)
-                        continue;
-                    string[] metadata = outlookKey.GetSubKeyNames();
-                    emails.AddRange(
-                        metadata.Select(md => outlookKey.OpenSubKey(md))
-                            .Where(co => co?.GetValue("001f6641") != null)
-                            .Select(
-                                co =>
-                                    System.Text.Encoding.UTF8.GetString(co.GetValue("001f6641") as byte[])
-                                        .Replace("\0", "")));
-
-                    emails.AddRange(
-                        metadata.Select(md => outlookKey.OpenSubKey(md))
-                            .Where(co => co?.GetValue("001e660b") != null)
-                            .Select(
-                                co =>
-                                    System.Text.Encoding.UTF8.GetString(co.GetValue("001e660b") as byte[])
-                                        .Replace("\0", "")));
-
-                }
-            }
-
-#endregion
-
-#region old lync
-
-            currentKey = Resources.CurrentUser;
-            //Windows NT\CurrentVersion\Windows Messaging Subsystem\Profiles
-            currentKey =
-                currentKey.OpenSubKey("software")?
-                    .OpenSubKey("microsoft")?
-                    .OpenSubKey("Windows NT")?
-                    .OpenSubKey("CurrentVersion")?.OpenSubKey("Windows Messaging Subsystem")?.OpenSubKey("Profiles");
-
-            string[] _outlookKeys = currentKey?.GetSubKeyNames();
-            if (_outlookKeys != null)
-                foreach (string ok in _outlookKeys)
-                {
-                    RegistryKey outlookKey = currentKey?.OpenSubKey(ok);
-                    if (outlookKey == null)
-                        continue;
-                    string[] metadata = outlookKey.GetSubKeyNames();
-
-                    emails.AddRange(
-                        metadata.Select(md => outlookKey.OpenSubKey(md))
-                            .Where(co => co?.GetValue("001f6641") != null)
-                            .Select(
-                                co =>
-                                    System.Text.Encoding.UTF8.GetString(co.GetValue("001f6641") as byte[])
-                                        .Replace("\0", "")));
-
-                    emails.AddRange(
-                        metadata.Select(md => outlookKey.OpenSubKey(md))
-                            .Where(co => co?.GetValue("001e660b") != null)
-                            .Select(
-                                co =>
-                                    System.Text.Encoding.UTF8.GetString(co.GetValue("001e660b") as byte[])
-                                        .Replace("\0", "")));
+                    if (subKeyName.Contains(".0"))
+                        officeVersions.Add(subKeyName);
                 }
 
-#endregion
-
-            emails = emails.Distinct().ToList();
-            Regex emailRegex = new Regex(@"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*", RegexOptions.IgnoreCase);
-            for (int i = 0; i < emails.Count; ++i)
-                emails[i] = emailRegex.Match(emails[i])?.Value;
-
-            List<string> nemails = new List<string>();
-            foreach (string email in emails)
-            {
-                foreach (var domainname in Resources.DomainNames)
+                foreach (string version in officeVersions)
                 {
-                    if (emails.Contains(domainname))
+                    RegistryKey outlookpreKey = currentKey.OpenSubKey(version)?
+                        .OpenSubKey("outlook")?.OpenSubKey("profiles");
+                    string[] outlookKeys = outlookpreKey?.GetSubKeyNames();
+                    if (outlookKeys == null) continue;
+                    foreach (string ok in outlookKeys)
                     {
-                        nemails.Add(email);
-                        break;
+                        RegistryKey outlookKey = outlookpreKey.OpenSubKey(ok);
+                        if (outlookKey == null)
+                            continue;
+                        string[] metadata = outlookKey.GetSubKeyNames();
+
+                        foreach (string md in metadata)
+                        {
+                            RegistryKey co = outlookKey.OpenSubKey(md);
+                            foreach (string lyncOutlookUserKey in Resources.LyncOutlookUserKeys)
+                            {
+                                if (co?.GetValue(lyncOutlookUserKey) != null)
+                                    // ReSharper disable once AssignNullToNotNullAttribute
+                                    emails.Add(System.Text.Encoding.UTF8.GetString(co.GetValue(lyncOutlookUserKey) as byte[]).Replace("\0", ""));
+                            }
+                        }
                     }
                 }
             }
-      
+
+            #endregion
+
+
+            #region vOld
+
+            currentKey = Resources.CurrentUser;
+            currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("Windows NT")?.OpenSubKey("CurrentVersion")?.OpenSubKey("Windows Messaging Subsystem")?.OpenSubKey("Profiles");
+            string[] oldOutlookSubKeyNames = currentKey?.GetSubKeyNames();
+            if (oldOutlookSubKeyNames != null)
+                foreach (string ok in oldOutlookSubKeyNames)
+                {
+                    RegistryKey outlookKey = currentKey.OpenSubKey(ok);
+                    if (outlookKey == null)
+                        continue;
+                    string[] metadata = outlookKey.GetSubKeyNames();
+
+                    foreach (string md in metadata)
+                    {
+                        RegistryKey co = outlookKey.OpenSubKey(md);
+                        foreach (string lyncOutlookUserKey in Resources.LyncOutlookUserKeys)
+                        {
+                            if (co?.GetValue(lyncOutlookUserKey) != null)
+                                // ReSharper disable once AssignNullToNotNullAttribute
+                                emails.Add(System.Text.Encoding.UTF8.GetString(co.GetValue(lyncOutlookUserKey) as byte[]).Replace("\0", ""));
+                        }
+                    }
+                }
+
+            #endregion
+
+
+            var cEmails = new List<string>();
+            for (var i = 0; i < emails.Count; ++i)
+                if (!cEmails.Contains(emails[i]))
+                    cEmails.Add(emails[i]);
+            emails = cEmails;
+            var emailRegex = new Regex(@"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*", RegexOptions.IgnoreCase);
+            for (var i = 0; i < emails.Count; ++i)
+                emails[i] = emailRegex.Match(emails[i]).Value;
+            var nemails = new List<string>();
+            foreach (string email in emails)
+            {
+                foreach (string domainname in Resources.DomainNames)
+                {
+                    if (!emails.Contains(domainname)) continue;
+                    nemails.Add(email);
+                    break;
+                }
+            }
+
             if (nemails.Count > 0)
             {
-                Console.WriteLine("Emails: ");
-                foreach (string email in nemails)
-                    Console.WriteLine(email);
+                Console.Write($"{Resources.TextUserAccountsFound}: ");
+                for (var i = 0; i < emails.Count - 1; ++i)
+                    Console.Write($"{emails[i]}, ");
+                Console.WriteLine(emails[emails.Count - 1]);
             }
             else
             {
-                Console.WriteLine("There are not emails");
+                Console.WriteLine(Resources.TextUserAccountsNotFound);
             }
-
-    
-        }  
-        private static void InstallOffice()
-        {
-            return;
-            //TODO:
-            if (!File.Exists("office.zip"))
-            {
-                WebClient Client = new WebClient();
-                Client.DownloadFile("OfficeDownloadUrl", @"office.zip");
-            }
-
-            DirectoryInfo directorySelected = new DirectoryInfo(Directory.GetCurrentDirectory());
-
-            foreach (FileInfo fileToDecompress in directorySelected.GetFiles("*.zip"))
-            {
-                Decompress(fileToDecompress);
-            }
-
 
         }
-        private static void Decompress(FileInfo fileToDecompress)
-        {
-            using (FileStream originalFileStream = fileToDecompress.OpenRead())
-            {
-                string currentFileName = fileToDecompress.FullName;
-                string newFileName = currentFileName.Remove(currentFileName.Length - fileToDecompress.Extension.Length);
-
-                using (FileStream decompressedFileStream = File.Create(newFileName))
-                {
-                    using (GZipStream decompressionStream = new GZipStream(originalFileStream, CompressionMode.Decompress))
-                    {
-                        decompressionStream.CopyTo(decompressedFileStream);
-                        Console.WriteLine("Decompressed: {0}", fileToDecompress.Name);
-                    }
-                }
-            }
-        }
-
+        #endregion
     }
 }
