@@ -16,7 +16,7 @@ int main()
 	int count = 0, i;
 	for (i = 0; i < sz; ++i)
 		ind[i] = i, val[i] = rand();
-	printf("Loaded %d elements. Total time: %.4lf\n", sz << 1, (double)clock() / CLOCKS_PER_SEC);
+	printf("Loaded %llu elements. Total time: %.4lf\n", sz << 1, double(clock()) / CLOCKS_PER_SEC);
 	printf("Enter search element: ");
 	scanf("%llu", &v);
 	start = clock();
@@ -28,7 +28,7 @@ int main()
 			++count;
 	}
 	end = clock();
-	printf("Found %d elements for %.4lf seconds\n", count, ((double)end - start) / (CLOCKS_PER_SEC));
+	printf("Found %d elements for %.4lf seconds\n", count, (double(end) - start) / (CLOCKS_PER_SEC));
 	delete ind;
 	delete val;
 	system("pause");
