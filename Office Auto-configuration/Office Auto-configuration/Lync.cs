@@ -28,6 +28,7 @@ namespace Office_Auto_configuration
         #region private mathods
         private static void InstallCertificate()
         {
+     
             X509Certificate2 cert;
             try
             {
@@ -40,23 +41,20 @@ namespace Office_Auto_configuration
             }
 
             //Для пользователя
-            var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
+            //var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
             //Для данного компьютера 
             //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            //?? X509Store store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
-
+            var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
 
             X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
             {
                 for (int i = 0; i < certs.Count; ++i)
                 {
-                    if (certs[i].Thumbprint == cert.Thumbprint)
-                    {
-                        Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
-                        store.Close();
-                        return;
-                    }
+                    if (certs[i].Thumbprint != cert.Thumbprint) continue;
+                    Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+                    store.Close();
+                    return;
                 }
             }
 
@@ -71,6 +69,9 @@ namespace Office_Auto_configuration
                 store.Close();
                 return;
             }
+      
+
+
 
             certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
@@ -127,7 +128,7 @@ namespace Office_Auto_configuration
         }
         private static void ConfigureRegistryKeys()
         {
-            var success = true;
+            bool success = true;
             RegistryKey currentKey = Resources.CurrentUser;
             currentKey = currentKey.OpenSubKey("software")?.OpenSubKey("microsoft")?.OpenSubKey("office");
             if (currentKey == null)
@@ -145,7 +146,7 @@ namespace Office_Auto_configuration
                     if (subKeyName.Contains(".0"))
                         officeVersions.Add(subKeyName);
                 }
-                var lyncInstalled = false;
+                bool lyncInstalled = false;
                 foreach (string version in officeVersions)
                 {
                     RegistryKey lyncKey = currentKey.OpenSubKey(version)?.OpenSubKey("lync", true);
@@ -262,12 +263,12 @@ namespace Office_Auto_configuration
 
 
             var cEmails = new List<string>();
-            for (var i = 0; i < emails.Count; ++i)
+            for (int i = 0; i < emails.Count; ++i)
                 if (!cEmails.Contains(emails[i]))
                     cEmails.Add(emails[i]);
             emails = cEmails;
             var emailRegex = new Regex(@"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*", RegexOptions.IgnoreCase);
-            for (var i = 0; i < emails.Count; ++i)
+            for (int i = 0; i < emails.Count; ++i)
                 emails[i] = emailRegex.Match(emails[i]).Value;
             var nemails = new List<string>();
             foreach (string email in emails)
@@ -283,7 +284,7 @@ namespace Office_Auto_configuration
             if (nemails.Count > 0)
             {
                 Console.Write($"{Resources.TextUserAccountsFound}: ");
-                for (var i = 0; i < emails.Count - 1; ++i)
+                for (int i = 0; i < emails.Count - 1; ++i)
                     Console.Write($"{emails[i]}, ");
                 Console.WriteLine(emails[emails.Count - 1]);
             }
