@@ -15,6 +15,7 @@ namespace Office_Auto_configuration
             Console.WriteLine("Outlook Configuration");
             ConfigureAutodiscover();
             InstallCertificate();
+            ConfigureRegistryKeys();
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
         }
@@ -22,7 +23,7 @@ namespace Office_Auto_configuration
         internal static void ConfigureAutodiscover()
         {
             System.IO.File.WriteAllText(Resources.OutlookAutodiscoverDestPath, Resources.OutlookAutodiscoverContent);
-            Console.WriteLine(Resources.TextOutlookAutodiscoverExistence + (System.IO.File.Exists(Resources.OutlookAutodiscoverDestPath) ? Resources.TextSuccess : Resources.TextFailed));
+            Console.WriteLine(Resources.TextOutlookAutodiscoverExistence + ": " + (System.IO.File.Exists(Resources.OutlookAutodiscoverDestPath) ? Resources.TextSuccess : Resources.TextFailed));
         }
 
         private static void InstallCertificate()
