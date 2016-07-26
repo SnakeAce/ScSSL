@@ -81,9 +81,6 @@
     <None Include="Files\Set_up_Outlook_to_connect_to_Exchange.docx">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Files\ssl-AD01-CA-cert.cer">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Files\icon.ico" />

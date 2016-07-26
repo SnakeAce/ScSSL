@@ -15,9 +15,16 @@ namespace Office_Auto_configuration
             Console.Clear();
             Console.WriteLine(Resources.TextLyncConfigurationTitle);
 
-            InstallCertificate();
+            if (Resources.IsAdministrator())
+            {
+                InstallCertificate();
+                ConfigureHostsFile();
+            }
+            else
+            {
+                InstallCertificate(1);
+            }
             ConfigureRegistryKeys();
-            ConfigureHostsFile();
             ConfigureUsers();
 
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
@@ -26,7 +33,7 @@ namespace Office_Auto_configuration
 
 
         #region private mathods
-        private static void InstallCertificate()
+        private static void InstallCertificate(int? n = null)
         {
      
             X509Certificate2 cert;
@@ -44,7 +51,8 @@ namespace Office_Auto_configuration
             //var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
             //Для данного компьютера 
             //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+
+            var store = new X509Store(StoreName.Root, n == null ? StoreLocation.LocalMachine : StoreLocation.CurrentUser);
 
             X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)

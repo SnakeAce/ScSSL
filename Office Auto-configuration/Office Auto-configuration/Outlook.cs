@@ -14,7 +14,11 @@ namespace Office_Auto_configuration
             Console.Clear();
             Console.WriteLine("Outlook Configuration");
             ConfigureAutodiscover();
-            InstallCertificate();
+            if (Resources.IsAdministrator())
+                InstallCertificate();
+            else
+                InstallCertificate(1);
+
             ConfigureRegistryKeys();
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
@@ -26,7 +30,7 @@ namespace Office_Auto_configuration
             Console.WriteLine(Resources.TextOutlookAutodiscoverExistence + ": " + (System.IO.File.Exists(Resources.OutlookAutodiscoverDestPath) ? Resources.TextSuccess : Resources.TextFailed));
         }
 
-        private static void InstallCertificate()
+        private static void InstallCertificate(int? t = null)
         {
 
             X509Certificate2 cert;
@@ -44,7 +48,7 @@ namespace Office_Auto_configuration
             //var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
             //Для данного компьютера 
             //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-            var store = new X509Store(StoreName.Root, StoreLocation.LocalMachine);
+            var store = new X509Store(StoreName.Root, t == null ? StoreLocation.LocalMachine : StoreLocation.CurrentUser);
 
             X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
@@ -124,7 +128,7 @@ namespace Office_Auto_configuration
                     foreach (string outlookDomain in Resources.OutlookDomains)
                     {
                         lyncKey.SetValue(outlookDomain, Resources.OutlookAutodiscoverDestPath, RegistryValueKind.String);
-                    }          
+                    }
                 }
                 if (!outlookInstalled)
                 {
