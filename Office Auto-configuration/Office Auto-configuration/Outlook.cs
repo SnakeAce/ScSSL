@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Win32;
+
 
 namespace Office_Auto_configuration
 {
@@ -18,7 +20,6 @@ namespace Office_Auto_configuration
                 InstallCertificate();
             else
                 InstallCertificate(1);
-
             ConfigureRegistryKeys();
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
@@ -27,12 +28,12 @@ namespace Office_Auto_configuration
         internal static void ConfigureAutodiscover()
         {
             System.IO.File.WriteAllText(Resources.OutlookAutodiscoverDestPath, Resources.OutlookAutodiscoverContent);
+            //isOk = isOk && System.IO.File.Exists(Resources.OutlookAutodiscoverDestPath);
             Console.WriteLine(Resources.TextOutlookAutodiscoverExistence + ": " + (System.IO.File.Exists(Resources.OutlookAutodiscoverDestPath) ? Resources.TextSuccess : Resources.TextFailed));
         }
 
         private static void InstallCertificate(int? t = null)
         {
-
             X509Certificate2 cert;
             try
             {
@@ -41,6 +42,7 @@ namespace Office_Auto_configuration
             catch (Exception ex)
             {
                 Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+                
                 return;
             }
 

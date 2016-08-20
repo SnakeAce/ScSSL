@@ -4,6 +4,26 @@ namespace Office_Auto_configuration
 {
     internal class Menu
     {
+        internal void ShowStandaloneOutlook()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine(Resources.TextWelcome);
+                Console.WriteLine(Resources.TextTitleSelection);
+                Console.WriteLine(Resources.TextSelectionItemFirst);
+                Console.WriteLine(Resources.TextSelectionItemLast);
+                ConsoleKeyInfo key = Console.ReadKey();
+                switch (key.KeyChar)
+                {
+                    case '0':
+                        return;
+                    case '1':
+                        Outlook.Configure();
+                        break;
+                }
+            }
+        }
         internal void Show()
         {
             while (true)
@@ -20,10 +40,10 @@ namespace Office_Auto_configuration
                 {
                     case '0':
                         return;
-                    case '1':
+                    case '2':
                         Lync.Configure();
                         break;
-                    case '2':
+                    case '1':
                         Outlook.Configure();
                         break;
                 }

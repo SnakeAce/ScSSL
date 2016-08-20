@@ -20,8 +20,8 @@ namespace Office_Auto_configuration
         internal const string TextServerName = "susu.ru";
         internal static readonly string TextWelcome = $"Вас приветсвует программа для автонастройки продуктов Microsoft для подключения к серверу {Resources.TextServerName}";
         internal const string TextTitleSelection = "Выбирете то, что желаете настроить.";
-        internal const string TextSelectionItemFirst = "1. Настройка Skype for Business (MS Lync)";
-        internal const string TextSelectionItemSecond = "2. Настройка MS Outlook";
+        internal const string TextSelectionItemFirst = "1. Настройка MS Outlook";
+        internal static readonly string TextSelectionItemSecond = $"2. {TextLyncConfigurationTitle}" ;
         internal const string TextSelectionItemLast = "0. Выход";
         internal const string TextPressAnyKeyToContinue = "Нажмите любую клавишу для продолжения.";
         internal const string TextCertificateInstallation = "Установка сертификата";
