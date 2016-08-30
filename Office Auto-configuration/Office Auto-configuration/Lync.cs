@@ -25,7 +25,7 @@ namespace Office_Auto_configuration
                 InstallCertificate(1);
             }
             ConfigureRegistryKeys();
-            ConfigureUsers();
+       //     ConfigureUsers();
 
             Console.WriteLine(Resources.TextPressAnyKeyToContinue);
             Console.ReadKey();
@@ -33,17 +33,83 @@ namespace Office_Auto_configuration
 
 
         #region private mathods
-        private static void InstallCertificate(int? n = null)
+        //private static void InstallCertificate(int? n = null)
+        //{
+
+        //    X509Certificate2 cert;
+        //    try
+        //    {
+        //        cert = new X509Certificate2(Resources.AddPath(Resources.LyncServerDomainCertificateFileName));
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+        //        return;
+        //    }
+
+        //    //Для пользователя
+        //    //var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
+        //    //Для данного компьютера 
+        //    //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
+
+        //    var store = new X509Store(StoreName.Root, n == null ? StoreLocation.LocalMachine : StoreLocation.CurrentUser);
+
+        //    X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
+        //    if (certs.Count > 0)
+        //    {
+        //        for (int i = 0; i < certs.Count; ++i)
+        //        {
+        //            if (certs[i].Thumbprint != cert.Thumbprint) continue;
+        //            Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+        //            store.Close();
+        //            return;
+        //        }
+        //    }
+
+        //    store.Open(OpenFlags.ReadWrite);
+        //    try
+        //    {
+        //        store.Add(cert);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+        //        store.Close();
+        //        return;
+        //    }
+
+
+
+
+        //    certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
+        //    if (certs.Count > 0)
+        //    {
+        //        for (int i = 0; i < certs.Count; ++i)
+        //        {
+        //            if (certs[i].Thumbprint != cert.Thumbprint) continue;
+        //            Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextSuccess}");
+        //            store.Close();
+        //            return;
+        //        }
+        //    }
+
+        //    Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed}");
+        //    store.Close();
+
+        //}
+
+
+        private static void InstallCertificate(int? t = null)
         {
-     
             X509Certificate2 cert;
             try
             {
-                cert = new X509Certificate2(Resources.AddPath(Resources.LyncServerDomainCertificateFileName));
+                cert = new X509Certificate2(Resources.AddPath(Resources.OutlookServerDomainCertificateFileName));
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed} - {ex.Message}");
+
                 return;
             }
 
@@ -51,8 +117,7 @@ namespace Office_Auto_configuration
             //var store = new X509Store(StoreName.Root, StoreLocation.CurrentUser);
             //Для данного компьютера 
             //?? X509Store store = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine);
-
-            var store = new X509Store(StoreName.Root, n == null ? StoreLocation.LocalMachine : StoreLocation.CurrentUser);
+            var store = new X509Store(StoreName.Root, t == null ? StoreLocation.LocalMachine : StoreLocation.CurrentUser);
 
             X509Certificate2Collection certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
             if (certs.Count > 0)
@@ -77,11 +142,7 @@ namespace Office_Auto_configuration
                 store.Close();
                 return;
             }
-      
-
-
-
-            certs = store.Certificates.Find(X509FindType.FindBySubjectName, Resources.LyncServerDomainCertificateName, true);
+            certs = store.Certificates.Find(X509FindType.FindByThumbprint, cert.Thumbprint, true);
             if (certs.Count > 0)
             {
                 for (int i = 0; i < certs.Count; ++i)
@@ -92,11 +153,10 @@ namespace Office_Auto_configuration
                     return;
                 }
             }
-
             Console.WriteLine($"{Resources.TextCertificateInstallation}: {Resources.TextFailed}");
             store.Close();
-
         }
+
         private static void ConfigureHostsFile()
         {
             string path = $@"{Environment.GetEnvironmentVariable("SystemRoot")}\System32\drivers\etc\hosts";
@@ -113,9 +173,9 @@ namespace Office_Auto_configuration
             }
             newRecords.Add(Resources.LyncDnsRecordsTitle);
             //TODO: При необходимости добавить другие записи
-            foreach (string prefix in Resources.LyncExternalDnsARecordsPrefix)
+            foreach (string prefix in Resources.LyncAllDnsRecords)
             {
-                newRecords.Add($"{Resources.LyncServerIp} {prefix}.{Resources.LyncServerAddressExternal}");
+                newRecords.Add($"{Resources.LyncServerIp} {prefix}.{Resources.LyncServerDnsAddsServerIp}");
             }
             try
             {

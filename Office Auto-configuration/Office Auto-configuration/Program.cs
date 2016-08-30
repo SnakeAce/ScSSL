@@ -9,8 +9,8 @@ namespace Office_Auto_configuration
         {
             Console.OutputEncoding = Encoding.GetEncoding(1251);
             var menu = new Menu();
-            //menu.Show();
-            menu.ShowStandaloneOutlook();
+            menu.Show();
+          //  menu.ShowStandaloneOutlook();
         }
     }
 }

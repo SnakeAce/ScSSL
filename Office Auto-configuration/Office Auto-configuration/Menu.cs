@@ -4,6 +4,7 @@ namespace Office_Auto_configuration
 {
     internal class Menu
     {
+
         internal void ShowStandaloneOutlook()
         {
             while (true)

@@ -21,7 +21,7 @@ namespace Office_Auto_configuration
         internal static readonly string TextWelcome = $"Вас приветсвует программа для автонастройки продуктов Microsoft для подключения к серверу {Resources.TextServerName}";
         internal const string TextTitleSelection = "Выбирете то, что желаете настроить.";
         internal const string TextSelectionItemFirst = "1. Настройка MS Outlook";
-        internal static readonly string TextSelectionItemSecond = $"2. {TextLyncConfigurationTitle}" ;
+        internal static readonly string TextSelectionItemSecond = $"2. {TextLyncConfigurationTitle} внутри сети ЮУрГУ" ;
         internal const string TextSelectionItemLast = "0. Выход";
         internal const string TextPressAnyKeyToContinue = "Нажмите любую клавишу для продолжения.";
         internal const string TextCertificateInstallation = "Установка сертификата";
@@ -37,13 +37,14 @@ namespace Office_Auto_configuration
 
         #region Lync Fields
         internal static readonly RegistryKey CurrentUser = Registry.CurrentUser;
-        internal const string LyncServerAddressInternal = "pvc.susu.ru"; //??
-        internal const string LyncServerAddressExternal = "pvc.susu.ru";
-        internal const string LyncServerDnsAddsServerIp = "pvc.susu.ru";
-        internal const string LyncServerIp = "ERROR";
+        internal const string LyncServerAddressInternal = "skype01.pvc.susu"; //??
+        internal const string LyncServerAddressExternal = "skype01.pvc.susu";
+        internal const string LyncServerDnsAddsServerIp = "pvc.susu";
+      //  internal const string LyncServerDnsAddsServerIp = "pvc.susu.ru";
+        internal const string LyncServerIp = "10.0.40.29";
         internal const string LyncServerDomainCertificateFileName = "pvcadcs2020.cer";
         internal const string LyncServerDomainCertificateName = "pvcadcs2020";
-        internal static readonly string[] DomainNames = { "@susu.ru", "@susu.ac.ru", "@pvc.susu.ru" };
+        internal static readonly string[] DomainNames = { "@susu.ru", "@susu.ac.ru", "@pvc.susu.ru", "@pvc.susu", "@pvc.susu.ac.ru" };
         internal const string OfficeDownloadUrl = "ERROR";
 
         internal static readonly string LyncDnsRecordsTitle = $"# Here DNS records for {Resources.LyncServerAddressExternal}";
@@ -51,6 +52,8 @@ namespace Office_Auto_configuration
         internal static readonly string[] LyncOutlookUserKeys = { "001f6641", "001e660b" };
 
         #region DNS Records
+
+        internal static readonly string[] LyncAllDnsRecords = { "skype01", "lyncdiscoverinternal", "lyncdiscover", "_sipinternaltls._tcp", "_sipinternal._tcp", "_sip._tls", "sipinternal", "sip", "sipexternal", "lyncdiscoverinternal", "lyncdiscover", "skype", "meet", "dialin", "admin" };
         internal static readonly string[] LyncInternalDnsARecordsPrefix = { "lyncdiscoverinternal", "lync", "sip", "dialin", "meet", "Admin" };
         internal static readonly string[] LyncInternalDnsSrvRecordsPrefix = { "_ntp._udp", "_sip._tls", "_sipfederationtls", "_sipinternaltls", "_xmpp-server._tcp" };
         internal static readonly string[] LyncExternalDnsARecordsPrefix = { "lyncdiscover", "Lyncwebext", "sip", "dialin", "meet", "AV", "sipexternal" };
