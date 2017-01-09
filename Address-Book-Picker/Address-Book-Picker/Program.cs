@@ -239,6 +239,8 @@ namespace Address_Book_Picker
             public string FatherName { get; private set; }
             public string Email { get; private set; } = "";
             public string Name { get; private set; }
+            public string DisplayName { get; private set; }
+            public bool isOk { get; private set; } = true;
             public Person()
             {
 
@@ -251,17 +253,15 @@ namespace Address_Book_Picker
                 this.LastName = name[0];
                 this.FirstName = name.Length > 1 ? name[1] : "";
                 this.FatherName = name.Length > 2 ? name[2] : "";
+                DisplayName = LastName + " " + FirstName + " " + FatherName + " : " + person;
                 List<string> emails = new List<string>();
                 for (int i = 0; i < source.Length; i++)
                     if (source[i].Contains("@susu.ru"))
                         emails.Add(source[i]);
                 if (emails.Count == 0)
                 {
-                    //TODO: relogic it
-                    Console.WriteLine($"Пользователь \"{source[4]}\" не имеет email @susu.ru");                  
-                    this.Name = Helper.Transliteration.Front((LastName + FirstName[0] + FatherName[0]).ToLower());
-                    this.Email = this.Name + "@susu.ru";
-                    return;              
+                    this.isOk = false;
+                    return;
                 }
                 if (emails.Count == 1)
                 {
@@ -298,14 +298,27 @@ namespace Address_Book_Picker
                 Console.ReadLine();
                 return;
             }
+            List<Person> wtfPersons = new List<Person>();
             List<Person> persons = new List<Person>();
             for (int i = 1; i < source.Count; ++i)
                 persons.Add(new Person(source[i]));
             List<List<string>> outputList = new List<List<string>>();
             outputList.Add(new List<string>() { "Name", "Firstname", "LastName", "ExternalEmailAddress", "DisplayName" });
-          //  persons.Sort((p1, p2) => String.Compare(p1.Name, p2.Name, StringComparison.Ordinal));
+            //  persons.Sort((p1, p2) => String.Compare(p1.Name, p2.Name, StringComparison.Ordinal));
             for (int i = 0; i < persons.Count; ++i)
-                outputList.Add(new List<string>() { persons[i].Name, persons[i].FirstName + " " + persons[i].FatherName, persons[i].LastName, persons[i].Email, persons[i].LastName + " " + persons[i].FirstName + " " + persons[i].FatherName });
+            {
+                if (persons[i].isOk)
+                    outputList.Add(new List<string>()
+                {
+                    persons[i].Name,
+                    persons[i].FirstName + " " + persons[i].FatherName,
+                    persons[i].LastName,
+                    persons[i].Email,
+                    persons[i].LastName + " " + persons[i].FirstName + " " + persons[i].FatherName
+                });
+                else
+                    wtfPersons.Add(persons[i]);
+            }
             persons.Clear();
             List<string> outputLines = new List<string>();
             for (int i = 0; i < outputList.Count; ++i)
@@ -320,7 +333,9 @@ namespace Address_Book_Picker
             string folderPath = Path.GetDirectoryName(path);
             string fullPath = folderPath + "\\" + fileName + "-converted" + Path.GetExtension(path);
             File.WriteAllLines(fullPath, outputLines);
+            File.WriteAllLines(folderPath + "\\" + fileName + "-WtfUsers.txt", wtfPersons.Select(x=>x.DisplayName));
             outputLines.Clear();
+            wtfPersons.Clear();
         }
         static void Main(string[] args)
         {
